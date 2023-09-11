@@ -2,13 +2,10 @@ classDiagram
   direction LR
 
   class User
-  class Realm
   class UserState
   class PersonalAccessToken
 
   class ServiceAccount
-  class Role
-  class RoleBinding
 
   User : ID string
   User : Username string
@@ -20,19 +17,12 @@ classDiagram
   User : Company string
   User : SecondaryMail string
 
-  Realm : Name string
-  Realm "1" <-- User : realmRef
-  Role "0..1" <.. Realm : defaultRoleRef
-
   <<enumeration>> UserState
   UserState : WaitingForApproval
   UserState : Active
   UserState : Suspended
   UserState : Banned
   UserState "1" <--o User
-
-  RoleBinding --> ServiceAccount
-  RoleBinding --> Role
 
   note for User "On User Activation, a ServiceAccount is provided to the user."
   ServiceAccount "1" <--o PersonalAccessToken

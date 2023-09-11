@@ -35,9 +35,11 @@ type UserSpec struct {
 	Email string `json:"email"`
 	//+required
 	Username string `json:"username"`
-	//+required
-	State UserState `json:"state"`
 
+	//+optional
+	//+kubebuilder:default:="WaitingForApproval"
+	//+kubebuilder:validation:Enum:=WaitingForApproval;Active;Suspended;Banned
+	State UserState `json:"state,omitempty"`
 	//+optional
 	Expiration *metav1.Time `json:"expiration,omitempty"`
 
@@ -55,7 +57,10 @@ type UserSpec struct {
 }
 
 // UserStatus defines the observed state of User
-type UserStatus struct{}
+type UserStatus struct {
+	// InitialGeneration is the first observed resource generation
+	InitialGeneration *int64 `json:"initialGeneration,omitempty"`
+}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
@@ -67,6 +72,11 @@ type User struct {
 
 	Spec   UserSpec   `json:"spec,omitempty"`
 	Status UserStatus `json:"status,omitempty"`
+}
+
+func (u User) IsNewUser() bool {
+	return u.Status.InitialGeneration == nil ||
+		*u.Status.InitialGeneration == u.ObjectMeta.Generation
 }
 
 //+kubebuilder:object:root=true

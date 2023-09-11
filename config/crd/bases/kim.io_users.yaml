@@ -51,16 +51,26 @@ spec:
               secondaryMail:
                 type: string
               state:
+                default: WaitingForApproval
+                enum:
+                - WaitingForApproval
+                - Active
+                - Suspended
+                - Banned
                 type: string
               username:
                 type: string
             required:
             - email
-            - state
             - username
             type: object
           status:
             description: UserStatus defines the observed state of User
+            properties:
+              initialGeneration:
+                description: InitialGeneration is the first observed resource generation
+                format: int64
+                type: integer
             type: object
         type: object
     served: true
