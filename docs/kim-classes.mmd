@@ -1,0 +1,45 @@
+classDiagram
+  direction LR
+
+  class UserMeta
+  class User
+  class Realm
+  class UserState
+  class PersonalAccessToken
+
+  class ServiceAccount
+  class Role
+  class RoleBinding
+
+  User : ID string
+  User : Username string
+  User : Email string
+  User : Expiration Time
+
+  Realm : Name string
+  Realm "1" <-- User : realmRef
+  Role "0..1" <.. Realm : roleRef
+
+  UserMeta "1" <--o "1" User
+  UserMeta : DisplayName string
+  UserMeta : GivenName string
+  UserMeta : FamilyName string
+  UserMeta : Company string
+  UserMeta : SecondaryMail string
+
+  <<enumeration>> UserState
+  UserState : WaitingForApproval
+  UserState : Active
+  UserState : Suspended
+  UserState : Banned
+  UserState "1" <--o User
+
+  RoleBinding --> ServiceAccount
+  RoleBinding --> Role
+
+  note for User "On User Activation, a ServiceAccount is provided to the user."
+  ServiceAccount "1" <--o PersonalAccessToken
+  User "1" o--> "0..1" ServiceAccount
+
+  PersonalAccessToken : Deadline Time
+  User o--> "0..*" PersonalAccessToken
