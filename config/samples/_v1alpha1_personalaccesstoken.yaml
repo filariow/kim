@@ -1,0 +1,12 @@
+apiVersion: kim.io/v1alpha1
+kind: PersonalAccessToken
+metadata:
+  labels:
+    app.kubernetes.io/name: personalaccesstoken
+    app.kubernetes.io/instance: personalaccesstoken-sample
+    app.kubernetes.io/part-of: kim
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kim
+  name: personalaccesstoken-sample
+spec:
+  # TODO(user): Add fields here

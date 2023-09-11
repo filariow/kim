@@ -10,4 +10,29 @@ plugins:
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: kim
 repo: github.com/filariow/kim
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: kim.io
+  kind: Realm
+  path: github.com/filariow/kim/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: kim.io
+  kind: User
+  path: github.com/filariow/kim/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: kim.io
+  kind: PersonalAccessToken
+  path: github.com/filariow/kim/api/v1alpha1
+  version: v1alpha1
 version: "3"

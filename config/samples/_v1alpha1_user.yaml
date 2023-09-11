@@ -1,0 +1,12 @@
+apiVersion: kim.io/v1alpha1
+kind: User
+metadata:
+  labels:
+    app.kubernetes.io/name: user
+    app.kubernetes.io/instance: user-sample
+    app.kubernetes.io/part-of: kim
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kim
+  name: user-sample
+spec:
+  # TODO(user): Add fields here

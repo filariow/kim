@@ -1,0 +1,27 @@
+# permissions for end users to view personalaccesstokens.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: personalaccesstoken-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: kim
+    app.kubernetes.io/part-of: kim
+    app.kubernetes.io/managed-by: kustomize
+  name: personalaccesstoken-viewer-role
+rules:
+- apiGroups:
+  - kim.io
+  resources:
+  - personalaccesstokens
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kim.io
+  resources:
+  - personalaccesstokens/status
+  verbs:
+  - get

@@ -1,7 +1,6 @@
 classDiagram
   direction LR
 
-  class UserMeta
   class User
   class Realm
   class UserState
@@ -15,17 +14,15 @@ classDiagram
   User : Username string
   User : Email string
   User : Expiration Time
+  User : DisplayName string
+  User : GivenName string
+  User : FamilyName string
+  User : Company string
+  User : SecondaryMail string
 
   Realm : Name string
   Realm "1" <-- User : realmRef
-  Role "0..1" <.. Realm : roleRef
-
-  UserMeta "1" <--o "1" User
-  UserMeta : DisplayName string
-  UserMeta : GivenName string
-  UserMeta : FamilyName string
-  UserMeta : Company string
-  UserMeta : SecondaryMail string
+  Role "0..1" <.. Realm : defaultRoleRef
 
   <<enumeration>> UserState
   UserState : WaitingForApproval
