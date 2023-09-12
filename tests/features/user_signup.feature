@@ -1,8 +1,7 @@
 Feature: User Sign-Up
 
     Scenario: WaitingForApproval
-        Given Create context namespace "test-wfa"
-        And   KIM is deployed
+        Given KIM is deployed
         When Resource is created:
         """
             apiVersion: kim.io/v1alpha1
@@ -23,9 +22,8 @@ Feature: User Sign-Up
         """
 
     Scenario: Active
-        Given Create context namespace "test-active"
-        And   KIM is deployed
-        When Resource is created:
+        Given KIM is deployed
+        When  Resource is created:
         """
             apiVersion: kim.io/v1alpha1
             kind: User

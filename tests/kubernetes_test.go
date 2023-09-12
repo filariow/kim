@@ -21,7 +21,7 @@ import (
 	"k8s.io/client-go/restmapper"
 )
 
-const TestNamespaceKey string = "TestNamespace"
+const ContextNamespaceKey string = "TestNamespace"
 
 type Kubernetes struct {
 	cli *kubernetes.Clientset
@@ -93,8 +93,10 @@ func (k *Kubernetes) buildClientForResource(ctx context.Context, unstructuredObj
 	dri := k.dyn.Resource(mapping.Resource)
 	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
 		if unstructuredObj.GetNamespace() == "" {
-			ns := k.getContextNamespaceOrDefault(ctx)
-			unstructuredObj.SetNamespace(ns)
+			if ns, ok := getContextNamespace(ctx); ok {
+				unstructuredObj.SetNamespace(ns)
+			}
+			// TODO: take track of the resource in context for cleanup? fail?
 		}
 		return dri.Namespace(unstructuredObj.GetNamespace()), nil
 	}
@@ -183,13 +185,13 @@ func (k *Kubernetes) createContextNamespace(ctx context.Context, namespace strin
 	if _, err := k.cli.CoreV1().Namespaces().Create(ctx, &ns, metav1.CreateOptions{}); err != nil {
 		return ctx, err
 	}
-	return context.WithValue(ctx, TestNamespaceKey, namespace), nil
+	return context.WithValue(ctx, ContextNamespaceKey, namespace), nil
 }
 
 func (k *Kubernetes) kimIsDeployed(ctx context.Context) error {
 	env := os.Environ()
 	args := []string{"/usr/bin/make", "deploy", "wait-rollout"}
-	if vs, ok := k.getContextNamespace(ctx); ok {
+	if vs, ok := getContextNamespace(ctx); ok {
 		args = append(args, fmt.Sprintf("NAMESPACE=%s", vs))
 	}
 
@@ -209,16 +211,10 @@ func (k *Kubernetes) kimIsDeployed(ctx context.Context) error {
 	return nil
 }
 
-func (k *Kubernetes) getContextNamespace(ctx context.Context) (string, bool) {
-	if vs, ok := ctx.Value(TestNamespaceKey).(string); ok {
+// utils
+func getContextNamespace(ctx context.Context) (string, bool) {
+	if vs, ok := ctx.Value(ContextNamespaceKey).(string); ok {
 		return vs, ok
 	}
 	return "", false
-}
-
-func (k *Kubernetes) getContextNamespaceOrDefault(ctx context.Context) string {
-	if vs, ok := ctx.Value(TestNamespaceKey).(string); ok {
-		return vs
-	}
-	return "default"
 }
