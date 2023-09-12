@@ -107,7 +107,17 @@ vet: ## Run go vet against code.
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $(shell go list ./... | grep -v /kim/tests) -coverprofile cover.out
+
+.PHONY: run-test-kind-cluster
+run-test-kind-cluster:
+	kind delete cluster --name test-acceptance
+	kind create cluster --name test-acceptance
+	kind load docker-image ${IMG}
+
+.PHONY: test-acceptance
+test-acceptance: manifests generate fmt vet  run-test-kind-cluster envtest docker-build deploy
+	go test -v -count=1 ./tests/...
 
 ##@ Build
 
