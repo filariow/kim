@@ -1,20 +1,14 @@
 Feature: User Sign-Up
 
     Scenario: WaitingForApproval
-        Given Resource is created:
-        """
-            apiVersion: v1
-            kind: Namespace
-            metadata:
-                name: test
-        """
+        Given Create context namespace "test-wfa"
+        And   KIM is deployed
         When Resource is created:
         """
             apiVersion: kim.io/v1alpha1
             kind: User
             metadata:
                 name: test-user
-                namespace: test
             spec:
                 username: alias-name
                 email: test@test.ts
@@ -26,5 +20,26 @@ Feature: User Sign-Up
             kind: ServiceAccount
             metadata:
                 name: test-user
-                namespace: test
+        """
+
+    Scenario: Active
+        Given Create context namespace "test-active"
+        And   KIM is deployed
+        When Resource is created:
+        """
+            apiVersion: kim.io/v1alpha1
+            kind: User
+            metadata:
+                name: test-user
+            spec:
+                username: alias-name
+                email: test@test.ts
+                state: Active
+        """
+        Then Resource exists:
+        """
+            apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+                name: test-user
         """

@@ -1,10 +1,14 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +20,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/restmapper"
 )
+
+const TestNamespaceKey string = "TestNamespace"
 
 type Kubernetes struct {
 	cli *kubernetes.Clientset
@@ -87,7 +93,8 @@ func (k *Kubernetes) buildClientForResource(ctx context.Context, unstructuredObj
 	dri := k.dyn.Resource(mapping.Resource)
 	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
 		if unstructuredObj.GetNamespace() == "" {
-			unstructuredObj.SetNamespace("default")
+			ns := k.getContextNamespaceOrDefault(ctx)
+			unstructuredObj.SetNamespace(ns)
 		}
 		return dri.Namespace(unstructuredObj.GetNamespace()), nil
 	}
@@ -165,4 +172,53 @@ func (k *Kubernetes) resourcesNotExist(ctx context.Context, spec string) error {
 	}
 
 	return nil
+}
+
+func (k *Kubernetes) createContextNamespace(ctx context.Context, namespace string) (context.Context, error) {
+	ns := corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+	if _, err := k.cli.CoreV1().Namespaces().Create(ctx, &ns, metav1.CreateOptions{}); err != nil {
+		return ctx, err
+	}
+	return context.WithValue(ctx, TestNamespaceKey, namespace), nil
+}
+
+func (k *Kubernetes) kimIsDeployed(ctx context.Context) error {
+	env := os.Environ()
+	args := []string{"/usr/bin/make", "deploy", "wait-rollout"}
+	if vs, ok := k.getContextNamespace(ctx); ok {
+		args = append(args, fmt.Sprintf("NAMESPACE=%s", vs))
+	}
+
+	var buf bytes.Buffer
+
+	cmd := exec.Cmd{
+		Path:   "/usr/bin/make",
+		Args:   args,
+		Dir:    "../",
+		Env:    env,
+		Stdout: &buf,
+		Stderr: &buf,
+	}
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("error running cmd '%s': %w\n%s", cmd.String(), err, buf.String())
+	}
+	return nil
+}
+
+func (k *Kubernetes) getContextNamespace(ctx context.Context) (string, bool) {
+	if vs, ok := ctx.Value(TestNamespaceKey).(string); ok {
+		return vs, ok
+	}
+	return "", false
+}
+
+func (k *Kubernetes) getContextNamespaceOrDefault(ctx context.Context) string {
+	if vs, ok := ctx.Value(TestNamespaceKey).(string); ok {
+		return vs
+	}
+	return "default"
 }

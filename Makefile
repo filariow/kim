@@ -50,6 +50,8 @@ endif
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
 OPERATOR_SDK_VERSION ?= v1.31.0
 
+# NAMESPACE is used in deployment/undeployment
+NAMESPACE ?= system
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
@@ -111,12 +113,12 @@ test: manifests generate fmt vet envtest ## Run tests.
 
 .PHONY: run-test-kind-cluster
 run-test-kind-cluster:
-	kind delete cluster --name test-acceptance
+	- kind delete cluster --name test-acceptance
 	kind create cluster --name test-acceptance
-	kind load docker-image ${IMG}
+	kind load docker-image ${IMG} --name test-acceptance
 
 .PHONY: test-acceptance
-test-acceptance: manifests generate fmt vet  run-test-kind-cluster envtest docker-build deploy
+test-acceptance: manifests generate fmt vet envtest docker-build run-test-kind-cluster install
 	go test -v -count=1 ./tests/...
 
 ##@ Build
@@ -174,10 +176,15 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 .PHONY: deploy
 deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	cd config/default && $(KUSTOMIZE) edit set namespace $(NAMESPACE) && $(KUSTOMIZE) build . | kubectl apply -f -
+
+.PHONY: wait-rollout
+wait-rollout:
+	kubectl rollout status -n $(NAMESPACE) deploy/kim-controller-manager -w --timeout=120s
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	cd config-deploy && $(KUSTOMIZE) edit set namespace $(NAMESPACE)
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Build Dependencies

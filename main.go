@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -36,6 +37,10 @@ import (
 	//+kubebuilder:scaffold:imports
 )
 
+const (
+	EnvWatchNamespace = "WATCH_NAMESPACE"
+)
+
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
@@ -49,6 +54,15 @@ func init() {
 }
 
 func main() {
+	wn, ok := os.LookupEnv(EnvWatchNamespace)
+	if !ok {
+		setupLog.Error(
+			fmt.Errorf("expected Environment Variable %s not found", EnvWatchNamespace),
+			"error defining controller's scope",
+		)
+		os.Exit(1)
+	}
+
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -69,6 +83,7 @@ func main() {
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
+		Namespace:              wn,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "49cd215b.kim.io",

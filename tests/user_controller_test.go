@@ -24,6 +24,9 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 
 	ctx.Step(`^Resource doesn't exist:$`, uf.resourcesNotExist)
 	ctx.Step(`^Resources don't exist:$`, uf.resourcesNotExist)
+
+	ctx.Step(`^Create context namespace "([\w]+[\w-]*)"$`, uf.createContextNamespace)
+	ctx.Step(`^KIM is deployed$`, uf.kimIsDeployed)
 }
 
 func TestFeatures(t *testing.T) {
