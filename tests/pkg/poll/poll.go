@@ -17,10 +17,6 @@ func Do(ctx context.Context, interval time.Duration, doFunc func(context.Context
 }
 
 func DoR[R any](ctx context.Context, interval time.Duration, doFunc func(context.Context) (R, error)) (R, error) {
-	return doR(ctx, interval, doFunc)
-}
-
-func doR[R any](ctx context.Context, interval time.Duration, doFunc func(context.Context) (R, error)) (R, error) {
 	// first attempt
 	errs := []error{}
 	if t, err := doFunc(ctx); err == nil {
