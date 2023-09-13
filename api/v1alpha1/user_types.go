@@ -60,6 +60,8 @@ type UserSpec struct {
 type UserStatus struct {
 	// InitialGeneration is the first observed resource generation
 	InitialGeneration *int64 `json:"initialGeneration,omitempty"`
+	// State is the actual state of the object
+	State UserState `json:"state,omitempty"`
 }
 
 //+kubebuilder:object:root=true

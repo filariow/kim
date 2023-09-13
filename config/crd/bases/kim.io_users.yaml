@@ -71,6 +71,9 @@ spec:
                 description: InitialGeneration is the first observed resource generation
                 format: int64
                 type: integer
+              state:
+                description: State is the actual state of the object
+                type: string
             type: object
         type: object
     served: true

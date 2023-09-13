@@ -118,7 +118,7 @@ run-test-kind-cluster:
 	kind load docker-image ${IMG} --name test-acceptance
 
 .PHONY: test-acceptance
-test-acceptance: manifests generate fmt vet envtest docker-build run-test-kind-cluster install
+test-acceptance: manifests kustomize generate fmt vet envtest docker-build run-test-kind-cluster install
 	go test -v -count=1 ./tests/...
 
 ##@ Build

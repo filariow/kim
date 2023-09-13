@@ -8,6 +8,7 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
 	"github.com/filariow/kim/tests/pkg/kube"
+	"github.com/filariow/kim/tests/pkg/users"
 	cp "github.com/otiai10/copy"
 )
 
@@ -62,6 +63,9 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 
 	ctx.Step(`^Create context namespace "([\w]+[\w-]*)"$`, k.CreateContextNamespace)
 	ctx.Step(`^KIM is deployed$`, k.KIMIsDeployed)
+
+	u := users.Users{Kubernetes: k}
+	ctx.Step(`^State of user ([\w]+[\w-]*) is (\w+)$`, u.UserStateIs)
 
 	// set and create the ContextNamespace
 	ctx.Before(buildHookPrepareScenarioNamespace(k))

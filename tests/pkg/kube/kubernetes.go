@@ -12,10 +12,10 @@ import (
 	"github.com/filariow/kim/tests/pkg/poll"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
@@ -80,12 +80,15 @@ func (k *Kubernetes) ParseResources(ctx context.Context, spec string) ([]unstruc
 }
 
 func (k *Kubernetes) BuildClientForResource(ctx context.Context, unstructuredObj unstructured.Unstructured) (dynamic.ResourceInterface, error) {
+	return k.BuildNamespacedClientForResource(ctx, unstructuredObj.GroupVersionKind(), unstructuredObj.GetNamespace())
+}
+
+func (k *Kubernetes) BuildNamespacedClientForResource(ctx context.Context, gvk schema.GroupVersionKind, namespace string) (dynamic.ResourceInterface, error) {
 	gr, err := restmapper.GetAPIGroupResources(k.Cli.Discovery())
 	if err != nil {
 		return nil, err
 	}
 
-	gvk := unstructuredObj.GroupVersionKind()
 	mapper := restmapper.NewDiscoveryRESTMapper(gr)
 	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
@@ -93,17 +96,16 @@ func (k *Kubernetes) BuildClientForResource(ctx context.Context, unstructuredObj
 	}
 
 	dri := k.Dyn.Resource(mapping.Resource)
-	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
-		if unstructuredObj.GetNamespace() == "" {
-			if ns, ok := ctx.Value(ContextNamespaceKey).(string); ok {
-				unstructuredObj.SetNamespace(ns)
-			}
-			// TODO: take track of the resource in context for cleanup? fail?
-		}
-		return dri.Namespace(unstructuredObj.GetNamespace()), nil
+	if namespace != "" {
+		return dri.Namespace(namespace), nil
 	}
 
-	return dri, nil
+	if ns, ok := ctx.Value(ContextNamespaceKey).(string); ok {
+		return dri.Namespace(ns), nil
+	}
+
+	// TODO: take track of the resource in context for cleanup? fail?
+	return nil, fmt.Errorf("error building namespaced client")
 }
 
 // steps

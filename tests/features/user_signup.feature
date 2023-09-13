@@ -20,6 +20,8 @@ Feature: User Sign-Up
             metadata:
                 name: test-user
         """
+        And State of user test-user is WaitingForApproval
+
 
     Scenario: Activation
         Given KIM is deployed
@@ -41,6 +43,7 @@ Feature: User Sign-Up
             metadata:
                 name: test-user
         """
+        And State of user test-user is Active
 
     Scenario: Ban
         Given KIM is deployed
@@ -62,6 +65,7 @@ Feature: User Sign-Up
             metadata:
                 name: test-user
         """
+        And State of user test-user is Active
         When Resource is updated:
         """
             apiVersion: kim.io/v1alpha1
@@ -80,6 +84,7 @@ Feature: User Sign-Up
             metadata:
                 name: test-user
         """
+        And State of user test-user is Banned
 
     Scenario: Suspension
         Given KIM is deployed
@@ -119,6 +124,7 @@ Feature: User Sign-Up
             metadata:
                 name: test-user
         """
+        And State of user test-user is Suspended
 
     Scenario: Reactivated from Ban
         Given KIM is deployed
@@ -140,6 +146,7 @@ Feature: User Sign-Up
             metadata:
                 name: test-user
         """
+        And State of user test-user is Banned
         When Resource is updated:
         """
             apiVersion: kim.io/v1alpha1
@@ -158,6 +165,7 @@ Feature: User Sign-Up
             metadata:
                 name: test-user
         """
+        And State of user test-user is Active
 
     Scenario: Reactivated from Suspension
         Given KIM is deployed
@@ -179,6 +187,7 @@ Feature: User Sign-Up
             metadata:
                 name: test-user
         """
+        And State of user test-user is Suspended
         When Resource is updated:
         """
             apiVersion: kim.io/v1alpha1
@@ -197,3 +206,4 @@ Feature: User Sign-Up
             metadata:
                 name: test-user
         """
+        And State of user test-user is Active

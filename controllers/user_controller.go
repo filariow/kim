@@ -72,46 +72,48 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		u.Status.InitialGeneration = &u.ObjectMeta.Generation
 	}
 
+	return ctrl.Result{}, r.reconcile(ctx, &u)
+}
+
+func (r *UserReconciler) reconcile(ctx context.Context, u *kimiov1alpha1.User) error {
+	l := log.FromContext(ctx).WithValues("namespace", u.GetNamespace(), "user", u.GetName())
+
 	switch u.Spec.State {
 	case kimiov1alpha1.WaitingForApprovalUserState:
 		// Nothing to do if user Is WaitingForApproval
-		l.Info("user needs to be approved")
-		if nu {
-			return ctrl.Result{}, r.Status().Update(ctx, &u)
+		l.Info("user needs to be approved, ensure ServiceAccount and Secret don't exist")
+		if err := r.ensureServiceAccountDoesntExist(ctx, u); err != nil {
+			l.Error(err, "error ensuring ServiceAccount and Secret doen't exist")
+			return err
 		}
-		return ctrl.Result{}, nil
 
 	case kimiov1alpha1.ActiveUserState:
 		l.Info("user is active, ensure ServiceAccount and Secret exist")
 		// Create the ServiceAccount and Secret if they don't exist
-		if err := r.ensureServiceAccountAndSecretExist(ctx, &u); err != nil {
+		if err := r.ensureServiceAccountAndSecretExist(ctx, u); err != nil {
 			l.Error(err, "error ensuring ServiceAccount and Secret exist")
-			return ctrl.Result{}, err
+			return err
 		}
-		return ctrl.Result{}, r.Status().Update(ctx, &u)
 
 	case kimiov1alpha1.SuspendedUserState:
 		// Delete the ServiceAccount
 		l.Info("user is suspended, ensure ServiceAccount and Secret don't exist")
-		if err := r.ensureServiceAccountDoesntExist(ctx, &u); err != nil {
+		if err := r.ensureServiceAccountDoesntExist(ctx, u); err != nil {
 			l.Error(err, "error ensuring ServiceAccount and Secret doen't exist")
-			return ctrl.Result{}, err
+			return err
 		}
-		return ctrl.Result{}, r.Status().Update(ctx, &u)
 
 	case kimiov1alpha1.BannedUserState:
 		// Delete the ServiceAccount
 		l.Info("user is banned, ensure ServiceAccount and Secret don't exist")
-		if err := r.ensureServiceAccountDoesntExist(ctx, &u); err != nil {
+		if err := r.ensureServiceAccountDoesntExist(ctx, u); err != nil {
 			l.Error(err, "error ensuring ServiceAccount and Secret doen't exist")
-			return ctrl.Result{}, err
+			return err
 		}
-		return ctrl.Result{}, r.Status().Update(ctx, &u)
-
-	default:
-		// That should not happen as for CRDs validation
-		return ctrl.Result{}, nil
 	}
+
+	u.Status.State = u.Spec.State
+	return r.Status().Update(ctx, u)
 }
 
 func (r *UserReconciler) ensureServiceAccountDoesntExist(ctx context.Context, user *kimiov1alpha1.User) error {
