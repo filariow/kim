@@ -8,16 +8,17 @@ import (
 	"path"
 
 	"github.com/cucumber/godog"
+	"github.com/filariow/kim/tests/pkg/kube"
 	cp "github.com/otiai10/copy"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func buildHookPrepareScenarioNamespace(k *Kubernetes) func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
+func buildHookPrepareScenarioNamespace(k *kube.Kubernetes) func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 	return func(ctx context.Context, sc *godog.Scenario) (context.Context, error) {
 		if _, ok := getContextNamespace(ctx); !ok {
-			ctx = context.WithValue(ctx, ContextNamespaceKey, fmt.Sprintf("kim-test-%s", sc.Id))
+			ctx = context.WithValue(ctx, kube.ContextNamespaceKey, fmt.Sprintf("kim-test-%s", sc.Id))
 		}
 
 		n, _ := getContextNamespace(ctx)
@@ -26,7 +27,7 @@ func buildHookPrepareScenarioNamespace(k *Kubernetes) func(ctx context.Context, 
 				Name: n,
 			},
 		}
-		_, err := k.cli.CoreV1().Namespaces().Create(ctx, &ns, metav1.CreateOptions{})
+		_, err := k.Cli.CoreV1().Namespaces().Create(ctx, &ns, metav1.CreateOptions{})
 		return ctx, err
 	}
 }
@@ -67,7 +68,7 @@ func hookPrepareScenarioTestFolder(ctx context.Context, sc *godog.Scenario) (con
 	return context.WithValue(ctx, TestFolderKey, tf), nil
 }
 
-func buildHookDestroyScenarioNamespace(k *Kubernetes) func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
+func buildHookDestroyScenarioNamespace(k *kube.Kubernetes) func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
 	return func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
 		if err != nil {
 			return ctx, err
@@ -78,7 +79,7 @@ func buildHookDestroyScenarioNamespace(k *Kubernetes) func(ctx context.Context, 
 			return ctx, err
 		}
 
-		if errDel := k.cli.CoreV1().Namespaces().Delete(ctx, ns, metav1.DeleteOptions{}); err != nil {
+		if errDel := k.Cli.CoreV1().Namespaces().Delete(ctx, ns, metav1.DeleteOptions{}); err != nil {
 			if !kerrors.IsNotFound(errDel) {
 				return ctx, errors.Join(errDel, err)
 			}
@@ -101,4 +102,12 @@ func hookDestroyScenarioTestFolder(ctx context.Context, sc *godog.Scenario, err 
 		return ctx, fmt.Errorf("error cleaning up temp folder for test %s: %w", sc.Id, err)
 	}
 	return ctx, err
+}
+
+// utils
+func getContextNamespace(ctx context.Context) (string, bool) {
+	if vs, ok := ctx.Value(kube.ContextNamespaceKey).(string); ok {
+		return vs, ok
+	}
+	return "", false
 }

@@ -1,4 +1,4 @@
-package tests
+package kube
 
 import (
 	"bytes"
@@ -24,8 +24,8 @@ import (
 const ContextNamespaceKey string = "TestNamespace"
 
 type Kubernetes struct {
-	cli *kubernetes.Clientset
-	dyn *dynamic.DynamicClient
+	Cli *kubernetes.Clientset
+	Dyn *dynamic.DynamicClient
 }
 
 func NewKubernetesFromEnvOrDie() *Kubernetes {
@@ -46,12 +46,12 @@ func NewKubernetesFromEnv() (*Kubernetes, error) {
 	dyn := dynamic.NewForConfigOrDie(cfg)
 
 	return &Kubernetes{
-		cli: cli,
-		dyn: dyn,
+		Cli: cli,
+		Dyn: dyn,
 	}, nil
 }
 
-func (k *Kubernetes) parseResources(ctx context.Context, spec string) ([]unstructured.Unstructured, error) {
+func (k *Kubernetes) ParseResources(ctx context.Context, spec string) ([]unstructured.Unstructured, error) {
 	uu := []unstructured.Unstructured{}
 	decoder := yamlutil.NewYAMLOrJSONDecoder(strings.NewReader(spec), 100)
 	for {
@@ -77,8 +77,8 @@ func (k *Kubernetes) parseResources(ctx context.Context, spec string) ([]unstruc
 	return uu, nil
 }
 
-func (k *Kubernetes) buildClientForResource(ctx context.Context, unstructuredObj unstructured.Unstructured) (dynamic.ResourceInterface, error) {
-	gr, err := restmapper.GetAPIGroupResources(k.cli.Discovery())
+func (k *Kubernetes) BuildClientForResource(ctx context.Context, unstructuredObj unstructured.Unstructured) (dynamic.ResourceInterface, error) {
+	gr, err := restmapper.GetAPIGroupResources(k.Cli.Discovery())
 	if err != nil {
 		return nil, err
 	}
@@ -90,10 +90,10 @@ func (k *Kubernetes) buildClientForResource(ctx context.Context, unstructuredObj
 		return nil, err
 	}
 
-	dri := k.dyn.Resource(mapping.Resource)
+	dri := k.Dyn.Resource(mapping.Resource)
 	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
 		if unstructuredObj.GetNamespace() == "" {
-			if ns, ok := getContextNamespace(ctx); ok {
+			if ns, ok := ctx.Value(ContextNamespaceKey).(string); ok {
 				unstructuredObj.SetNamespace(ns)
 			}
 			// TODO: take track of the resource in context for cleanup? fail?
@@ -105,14 +105,14 @@ func (k *Kubernetes) buildClientForResource(ctx context.Context, unstructuredObj
 }
 
 // steps
-func (k *Kubernetes) resourcesAreCreated(ctx context.Context, spec string) error {
-	uu, err := k.parseResources(ctx, spec)
+func (k *Kubernetes) ResourcesAreCreated(ctx context.Context, spec string) error {
+	uu, err := k.ParseResources(ctx, spec)
 	if err != nil {
 		return err
 	}
 
 	for _, u := range uu {
-		dri, err := k.buildClientForResource(ctx, u)
+		dri, err := k.BuildClientForResource(ctx, u)
 		if err != nil {
 			return err
 		}
@@ -125,14 +125,14 @@ func (k *Kubernetes) resourcesAreCreated(ctx context.Context, spec string) error
 	return nil
 }
 
-func (k *Kubernetes) resourcesExist(ctx context.Context, spec string) error {
-	uu, err := k.parseResources(ctx, spec)
+func (k *Kubernetes) ResourcesExist(ctx context.Context, spec string) error {
+	uu, err := k.ParseResources(ctx, spec)
 	if err != nil {
 		return err
 	}
 
 	for _, u := range uu {
-		dri, err := k.buildClientForResource(ctx, u)
+		dri, err := k.BuildClientForResource(ctx, u)
 		if err != nil {
 			return err
 		}
@@ -145,14 +145,14 @@ func (k *Kubernetes) resourcesExist(ctx context.Context, spec string) error {
 	return nil
 }
 
-func (k *Kubernetes) resourcesNotExist(ctx context.Context, spec string) error {
-	uu, err := k.parseResources(ctx, spec)
+func (k *Kubernetes) ResourcesNotExist(ctx context.Context, spec string) error {
+	uu, err := k.ParseResources(ctx, spec)
 	if err != nil {
 		return err
 	}
 
 	for _, u := range uu {
-		dri, err := k.buildClientForResource(ctx, u)
+		dri, err := k.BuildClientForResource(ctx, u)
 		if err != nil {
 			return err
 		}
@@ -176,22 +176,22 @@ func (k *Kubernetes) resourcesNotExist(ctx context.Context, spec string) error {
 	return nil
 }
 
-func (k *Kubernetes) createContextNamespace(ctx context.Context, namespace string) (context.Context, error) {
+func (k *Kubernetes) CreateContextNamespace(ctx context.Context, namespace string) (context.Context, error) {
 	ns := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
 	}
-	if _, err := k.cli.CoreV1().Namespaces().Create(ctx, &ns, metav1.CreateOptions{}); err != nil {
+	if _, err := k.Cli.CoreV1().Namespaces().Create(ctx, &ns, metav1.CreateOptions{}); err != nil {
 		return ctx, err
 	}
 	return context.WithValue(ctx, ContextNamespaceKey, namespace), nil
 }
 
-func (k *Kubernetes) kimIsDeployed(ctx context.Context) error {
+func (k *Kubernetes) KIMIsDeployed(ctx context.Context) error {
 	env := os.Environ()
 	args := []string{"/usr/bin/make", "deploy", "wait-rollout", "-o", "install"}
-	if vs, ok := getContextNamespace(ctx); ok {
+	if vs, ok := ctx.Value(ContextNamespaceKey).(string); ok {
 		args = append(args, fmt.Sprintf("NAMESPACE=%s", vs))
 	}
 
@@ -209,12 +209,4 @@ func (k *Kubernetes) kimIsDeployed(ctx context.Context) error {
 		return fmt.Errorf("error running cmd '%s': %w\n%s", cmd.String(), err, buf.String())
 	}
 	return nil
-}
-
-// utils
-func getContextNamespace(ctx context.Context) (string, bool) {
-	if vs, ok := ctx.Value(ContextNamespaceKey).(string); ok {
-		return vs, ok
-	}
-	return "", false
 }

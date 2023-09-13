@@ -7,6 +7,7 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
+	"github.com/filariow/kim/tests/pkg/kube"
 	cp "github.com/otiai10/copy"
 )
 
@@ -45,19 +46,19 @@ func TestFeatures(t *testing.T) {
 }
 
 func InitializeScenario(ctx *godog.ScenarioContext) {
-	k := NewKubernetesFromEnvOrDie()
+	k := kube.NewKubernetesFromEnvOrDie()
 
-	ctx.Step(`^Resource is created:$`, k.resourcesAreCreated)
-	ctx.Step(`^Resources are created:$`, k.resourcesAreCreated)
+	ctx.Step(`^Resource is created:$`, k.ResourcesAreCreated)
+	ctx.Step(`^Resources are created:$`, k.ResourcesAreCreated)
 
-	ctx.Step(`^Resource exists:$`, k.resourcesExist)
-	ctx.Step(`^Resources exist:$`, k.resourcesExist)
+	ctx.Step(`^Resource exists:$`, k.ResourcesExist)
+	ctx.Step(`^Resources exist:$`, k.ResourcesExist)
 
-	ctx.Step(`^Resource doesn't exist:$`, k.resourcesNotExist)
-	ctx.Step(`^Resources don't exist:$`, k.resourcesNotExist)
+	ctx.Step(`^Resource doesn't exist:$`, k.ResourcesNotExist)
+	ctx.Step(`^Resources don't exist:$`, k.ResourcesNotExist)
 
-	ctx.Step(`^Create context namespace "([\w]+[\w-]*)"$`, k.createContextNamespace)
-	ctx.Step(`^KIM is deployed$`, k.kimIsDeployed)
+	ctx.Step(`^Create context namespace "([\w]+[\w-]*)"$`, k.CreateContextNamespace)
+	ctx.Step(`^KIM is deployed$`, k.KIMIsDeployed)
 
 	// set and create the ContextNamespace
 	ctx.Before(buildHookPrepareScenarioNamespace(k))
