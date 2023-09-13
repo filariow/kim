@@ -41,3 +41,43 @@ Feature: User Sign-Up
             metadata:
                 name: test-user
         """
+
+    Scenario: Ban
+        Given KIM is deployed
+        And   Resource is created:
+        """
+            apiVersion: kim.io/v1alpha1
+            kind: User
+            metadata:
+                name: test-user
+            spec:
+                username: alias-name
+                email: test@test.ts
+                state: Active
+        """
+        And Resource exists:
+        """
+            apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+                name: test-user
+        """
+        When Resource is updated:
+        """
+            apiVersion: kim.io/v1alpha1
+            kind: User
+            metadata:
+                name: test-user
+            spec:
+                username: alias-name
+                email: test@test.ts
+                state: Banned
+        """
+        Then Resource doesn't exist:
+        """
+            apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+                name: test-user
+        """
+

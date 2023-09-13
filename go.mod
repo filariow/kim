@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/cucumber/godog v0.13.0
+	github.com/evanphx/json-patch v4.12.0+incompatible
 	github.com/onsi/ginkgo/v2 v2.6.0
 	github.com/onsi/gomega v1.24.1
 	github.com/otiai10/copy v1.12.0

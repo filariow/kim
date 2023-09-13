@@ -51,6 +51,9 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 	ctx.Step(`^Resource is created:$`, k.ResourcesAreCreated)
 	ctx.Step(`^Resources are created:$`, k.ResourcesAreCreated)
 
+	ctx.Step(`^Resource is updated:$`, k.ResourcesAreUpdated)
+	ctx.Step(`^Resources are updated:$`, k.ResourcesAreUpdated)
+
 	ctx.Step(`^Resource exists:$`, k.ResourcesExist)
 	ctx.Step(`^Resources exist:$`, k.ResourcesExist)
 

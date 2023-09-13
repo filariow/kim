@@ -3,13 +3,15 @@ package kube
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -117,7 +119,33 @@ func (k *Kubernetes) ResourcesAreCreated(ctx context.Context, spec string) error
 			return err
 		}
 
-		if _, err := dri.Create(context.Background(), &u, metav1.CreateOptions{}); err != nil {
+		if _, err := dri.Create(ctx, &u, metav1.CreateOptions{}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (k *Kubernetes) ResourcesAreUpdated(ctx context.Context, spec string) error {
+	uu, err := k.ParseResources(ctx, spec)
+	if err != nil {
+		return err
+	}
+
+	for _, u := range uu {
+		dri, err := k.BuildClientForResource(ctx, u)
+		if err != nil {
+			return err
+		}
+
+		po, err := dri.Get(ctx, u.GetName(), metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		po.Object["spec"] = u.Object["spec"]
+		if _, err := dri.Update(ctx, po, metav1.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
@@ -137,7 +165,7 @@ func (k *Kubernetes) ResourcesExist(ctx context.Context, spec string) error {
 			return err
 		}
 
-		if _, err := dri.Get(context.Background(), u.GetName(), metav1.GetOptions{}); err != nil {
+		if _, err := dri.Get(ctx, u.GetName(), metav1.GetOptions{}); err != nil {
 			return err
 		}
 	}
@@ -157,12 +185,19 @@ func (k *Kubernetes) ResourcesNotExist(ctx context.Context, spec string) error {
 			return err
 		}
 
-		if _, err := dri.Get(context.Background(), u.GetName(), metav1.GetOptions{}); err != nil {
-			if errors.IsNotFound(err) {
-				continue
+		ctxd, cf := context.WithTimeout(ctx, 2*time.Minute)
+		_, err = pollT(ctxd, time.Second, time.Minute, func(c context.Context) (*unstructured.Unstructured, error) {
+			if _, err := dri.Get(c, u.GetName(), metav1.GetOptions{}); err != nil {
+				if kerrors.IsNotFound(err) {
+					return nil, nil
+				}
 			}
-			return err
-		} else {
+			return nil, err
+		})
+
+		cf()
+
+		if err != nil {
 			ld, err := u.MarshalJSON()
 			if err != nil {
 				return fmt.Errorf(
@@ -174,6 +209,38 @@ func (k *Kubernetes) ResourcesNotExist(ctx context.Context, spec string) error {
 	}
 
 	return nil
+}
+
+func pollT[T any](ctx context.Context, interval, timeout time.Duration, f func(context.Context) (T, error)) (T, error) {
+	// first attempt
+	errs := []error{}
+	if t, err := f(ctx); err == nil {
+		return t, err
+	} else {
+		errs = append(errs, err)
+	}
+
+	// loop until timeout
+	tr := time.NewTimer(interval)
+	for {
+		select {
+		case <-ctx.Done():
+			var t T
+			return t, fmt.Errorf("poller timed out: %w", errors.Join(errs...))
+		case <-tr.C:
+			c, cf := context.WithTimeout(ctx, timeout)
+
+			if t, err := f(c); err == nil {
+				cf()
+				return t, nil
+			} else {
+				errs = append(errs, err)
+			}
+
+			tr.Reset(interval)
+			cf()
+		}
+	}
 }
 
 func (k *Kubernetes) CreateContextNamespace(ctx context.Context, namespace string) (context.Context, error) {
