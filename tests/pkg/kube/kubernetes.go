@@ -3,13 +3,13 @@ package kube
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/filariow/kim/tests/pkg/poll"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -186,22 +186,24 @@ func (k *Kubernetes) ResourcesNotExist(ctx context.Context, spec string) error {
 		}
 
 		ctxd, cf := context.WithTimeout(ctx, 2*time.Minute)
-		_, err = pollT(ctxd, time.Second, time.Minute, func(c context.Context) (*unstructured.Unstructured, error) {
-			if _, err := dri.Get(c, u.GetName(), metav1.GetOptions{}); err != nil {
+		_, err = poll.DoR(ctxd, time.Second, func(ictx context.Context) (*unstructured.Unstructured, error) {
+			lctx, lcf := context.WithTimeout(ictx, 1*time.Minute)
+			defer lcf()
+
+			if _, err := dri.Get(lctx, u.GetName(), metav1.GetOptions{}); err != nil {
 				if kerrors.IsNotFound(err) {
 					return nil, nil
 				}
 			}
 			return nil, err
 		})
-
 		cf()
 
 		if err != nil {
 			ld, err := u.MarshalJSON()
 			if err != nil {
 				return fmt.Errorf(
-					"resource exists: [ ApiVersion=%s, Kind=%s, Namespace=%s, Name=%s ]. Error marshaling as json: %w",
+					"resource exists: [ ApiVersion=%s, Kind=%s, Namespace=%s, Name=%s ]. Error marshaling as json: %w",
 					u.GetAPIVersion(), u.GetKind(), u.GetNamespace(), u.GetName(), err)
 			}
 			return fmt.Errorf("resource exists: %s", ld)
@@ -209,38 +211,6 @@ func (k *Kubernetes) ResourcesNotExist(ctx context.Context, spec string) error {
 	}
 
 	return nil
-}
-
-func pollT[T any](ctx context.Context, interval, timeout time.Duration, f func(context.Context) (T, error)) (T, error) {
-	// first attempt
-	errs := []error{}
-	if t, err := f(ctx); err == nil {
-		return t, err
-	} else {
-		errs = append(errs, err)
-	}
-
-	// loop until timeout
-	tr := time.NewTimer(interval)
-	for {
-		select {
-		case <-ctx.Done():
-			var t T
-			return t, fmt.Errorf("poller timed out: %w", errors.Join(errs...))
-		case <-tr.C:
-			c, cf := context.WithTimeout(ctx, timeout)
-
-			if t, err := f(c); err == nil {
-				cf()
-				return t, nil
-			} else {
-				errs = append(errs, err)
-			}
-
-			tr.Reset(interval)
-			cf()
-		}
-	}
 }
 
 func (k *Kubernetes) CreateContextNamespace(ctx context.Context, namespace string) (context.Context, error) {
