@@ -190,7 +190,7 @@ func (k *Kubernetes) createContextNamespace(ctx context.Context, namespace strin
 
 func (k *Kubernetes) kimIsDeployed(ctx context.Context) error {
 	env := os.Environ()
-	args := []string{"/usr/bin/make", "deploy", "wait-rollout"}
+	args := []string{"/usr/bin/make", "deploy", "wait-rollout", "-o", "install"}
 	if vs, ok := getContextNamespace(ctx); ok {
 		args = append(args, fmt.Sprintf("NAMESPACE=%s", vs))
 	}

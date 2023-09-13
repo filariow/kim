@@ -28,3 +28,4 @@ Dockerfile.cross
 # tmp folder
 out
 bin
+.tmp
