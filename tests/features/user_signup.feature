@@ -21,7 +21,7 @@ Feature: User Sign-Up
                 name: test-user
         """
 
-    Scenario: Active
+    Scenario: Activation
         Given KIM is deployed
         When  Resource is created:
         """
@@ -81,7 +81,7 @@ Feature: User Sign-Up
                 name: test-user
         """
 
-    Scenario: Suspended
+    Scenario: Suspension
         Given KIM is deployed
         And   Resource is created:
         """
