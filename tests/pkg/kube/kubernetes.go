@@ -167,9 +167,14 @@ func (k *Kubernetes) ResourcesExist(ctx context.Context, spec string) error {
 			return err
 		}
 
-		if _, err := dri.Get(ctx, u.GetName(), metav1.GetOptions{}); err != nil {
-			return err
-		}
+		ctxd, cf := context.WithTimeout(ctx, 2*time.Minute)
+		_, err = poll.DoR(ctxd, time.Second, func(ictx context.Context) (*unstructured.Unstructured, error) {
+			lctx, lcf := context.WithTimeout(ictx, 1*time.Minute)
+			defer lcf()
+
+			return dri.Get(lctx, u.GetName(), metav1.GetOptions{})
+		})
+		cf()
 	}
 
 	return nil
